@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Card from '../components/Card';
@@ -11,7 +11,13 @@ const teacherLinks = [
 ];
 
 export default function TeacherDashboard() {
-  const { assignments, logout } = useApp();
+  const { assignments, logout, loadData, user } = useApp();
+
+  useEffect(() => {
+    if (user?.id) {
+      loadData(user.id);
+    }
+  }, [user?.id]);
 
   return (
     <div className="layout">

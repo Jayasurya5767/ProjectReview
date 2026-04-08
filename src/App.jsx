@@ -11,9 +11,54 @@ import SubmitAssignment from './pages/SubmitAssignment';
 import Grades from './pages/Grades';
 
 function ProtectedRoute({ children, allowedRole }) {
-  const { userRole } = useApp();
-  if (!userRole) return <Navigate to="/" replace />;
-  if (userRole !== allowedRole) return <Navigate to="/" replace />;
+  const { user, token } = useApp();
+  
+  // Fallback to localStorage if context state hasn't updated yet
+  let storedToken = token || localStorage.getItem('token');
+  let storedUser = user;
+  
+  // If we don't have user from context, try to get from localStorage
+  if (!storedUser) {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        storedUser = JSON.parse(stored);
+        console.log('✅ ProtectedRoute: Loaded user from localStorage:', storedUser);
+      }
+    } catch (e) {
+      console.error('❌ ProtectedRoute: Failed to parse stored user:', e);
+      localStorage.removeItem('user'); // Clear invalid data
+    }
+  }
+
+  console.log('🛡️ ProtectedRoute check:', {
+    path: window.location.pathname,
+    hasToken: !!storedToken,
+    hasUser: !!storedUser,
+    userRole: storedUser?.role,
+    allowedRole,
+    isAuthorized: storedToken && storedUser && storedUser.role === allowedRole
+  });
+
+  // If no token, redirect to login
+  if (!storedToken) {
+    console.log('❌ ProtectedRoute: No token found, redirecting to /');
+    return <Navigate to="/" replace />;
+  }
+
+  // If no user, redirect to login
+  if (!storedUser) {
+    console.log('❌ ProtectedRoute: No user found, redirecting to /');
+    return <Navigate to="/" replace />;
+  }
+
+  // Check role matches
+  if (storedUser.role !== allowedRole) {
+    console.log(`❌ ProtectedRoute: User role mismatch. Got: ${storedUser.role}, Expected: ${allowedRole}, redirecting to /`);
+    return <Navigate to="/" replace />;
+  }
+
+  console.log('✅ ProtectedRoute: Authorization granted, rendering component');
   return children;
 }
 
@@ -26,7 +71,7 @@ export default function App() {
           <Route
             path="/teacher/dashboard"
             element={
-              <ProtectedRoute allowedRole="teacher">
+              <ProtectedRoute allowedRole="TEACHER">
                 <TeacherDashboard />
               </ProtectedRoute>
             }
@@ -34,7 +79,7 @@ export default function App() {
           <Route
             path="/teacher/create"
             element={
-              <ProtectedRoute allowedRole="teacher">
+              <ProtectedRoute allowedRole="TEACHER">
                 <CreateAssignment />
               </ProtectedRoute>
             }
@@ -42,7 +87,7 @@ export default function App() {
           <Route
             path="/teacher/submissions"
             element={
-              <ProtectedRoute allowedRole="teacher">
+              <ProtectedRoute allowedRole="TEACHER">
                 <Submissions />
               </ProtectedRoute>
             }
@@ -50,7 +95,7 @@ export default function App() {
           <Route
             path="/student/dashboard"
             element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="STUDENT">
                 <StudentDashboard />
               </ProtectedRoute>
             }
@@ -58,7 +103,7 @@ export default function App() {
           <Route
             path="/student/submit"
             element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="STUDENT">
                 <SubmitAssignment />
               </ProtectedRoute>
             }
@@ -66,7 +111,7 @@ export default function App() {
           <Route
             path="/student/grades"
             element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="STUDENT">
                 <Grades />
               </ProtectedRoute>
             }
